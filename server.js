@@ -121,6 +121,15 @@ async function handleApi(req, res, url) {
     return send(res, 200, { checkoutReady: !!CHECKOUT_URL, checkoutUrl: CHECKOUT_URL, priceLabel: PRICE_LABEL });
   }
 
+  // UPI has no webhook here; this is an honor-system post-payment access link.
+  if (req.method === 'GET' && url.pathname === '/api/access') {
+    const now = Date.now();
+    const exp = now + PLAN_DAYS * 86400000;
+    const token = signToken({ src: 'honor-system-payment-link', exp });
+    addClaim({ ts: now, note: 'honor-system-payment-link', ip: ip ? ip.replace(/\.\d+$/, '.xxx') : '', verified: false });
+    return send(res, 200, { token, exp });
+  }
+
   if (req.method === 'POST' && url.pathname === '/api/claim') {
     return send(res, 410, { error: 'Self-unlock is disabled. Enter the one-time code issued after payment is verified.' });
   }
