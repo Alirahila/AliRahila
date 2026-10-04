@@ -229,6 +229,9 @@ a{color:#f2a3c0}
 <label for="pw">Admin passphrase</label>
 <input id="pw" type="password" autocomplete="off">
 <button id="load">Load claims</button>
+<label for="issueNote">Payment reference for the next unlock code</label>
+<input id="issueNote" type="text" autocomplete="off" placeholder="Optional reference">
+<button id="issue" type="button">Issue one-time unlock code</button>
 <div class="msg" id="msg"></div>
 <div id="list" style="margin-top:16px;font-size:14.5px"></div>
 </div>
