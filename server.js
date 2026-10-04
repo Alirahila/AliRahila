@@ -125,33 +125,8 @@ async function handleApi(req, res, url) {
     return send(res, 410, { error: 'Self-unlock is disabled. Enter the one-time code issued after payment is verified.' });
   }
 
-  if (req.method === 'POST' && url.pathname === '/api/admin/issue-code') {
-    if (!adminAuthed(req)) return send(res, 401, { error: 'Wrong admin passphrase.' });
-    let body;
-    try { body = await readBody(req, 2048); } catch (e) { return send(res, 400, { error: 'Invalid request.' }); }
-    const code = crypto.randomBytes(6).toString('hex').toUpperCase();
-    const exp = Date.now() + 15 * 60 * 1000;
-    const codes = loadCodes().filter((c) => !c.used && c.exp > Date.now());
-    codes.push({ hash: codeHash(code), exp, note: String(body.note || '').slice(0, 200), createdAt: Date.now() });
-    try { saveCodes(codes); } catch (e) { return send(res, 500, { error: 'Could not save unlock code.' }); }
-    return send(res, 200, { code, exp });
-  }
-
-  if (req.method === 'POST' && url.pathname === '/api/redeem') {
-    if (limited(ip, 8)) return send(res, 429, { error: 'Too many attempts. Please wait a minute and try again.' });
-    let body;
-    try { body = await readBody(req, 2048); } catch (e) { return send(res, 400, { error: 'Invalid request.' }); }
-    const code = String(body.code || '').trim().toUpperCase();
-    if (!/^[A-F0-9]{12}$/.test(code)) return send(res, 401, { error: 'Enter a valid unlock code.' });
-    const now = Date.now(); const codes = loadCodes();
-    const match = codes.find((c) => !c.used && c.exp > now && sameText(c.hash, codeHash(code)));
-    if (!match) return send(res, 401, { error: 'Invalid, expired, or already-used unlock code.' });
-    match.used = true; match.usedAt = now; match.ip = ip ? ip.replace(/\.\d+$/, '.xxx') : '';
-    try { saveCodes(codes); } catch (e) { return send(res, 500, { error: 'Could not redeem unlock code.' }); }
-    const exp = now + PLAN_DAYS * 86400000;
-    const token = signToken({ src: 'verified-code', exp });
-    addClaim({ ts: now, note: match.note || 'verified code', ip: match.ip, verified: true });
-    return send(res, 200, { token, exp });
+  if (req.method === 'POST' && (url.pathname === '/api/admin/issue-code' || url.pathname === '/api/redeem')) {
+    return send(res, 410, { error: 'Manual unlock is disabled until automatic payment verification is integrated.' });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/admin/claims') {
@@ -229,22 +204,10 @@ a{color:#f2a3c0}
 <label for="pw">Admin passphrase</label>
 <input id="pw" type="password" autocomplete="off">
 <button id="load">Load claims</button>
-<label for="issueNote">Payment reference for the next unlock code</label>
-<input id="issueNote" type="text" autocomplete="off" placeholder="Optional reference">
-<button id="issue" type="button">Issue one-time unlock code</button>
 <div class="msg" id="msg"></div>
 <div id="list" style="margin-top:16px;font-size:14.5px"></div>
 </div>
 <script>
-document.getElementById('issue').onclick = async function(){
-  var msg=document.getElementById('msg'), pw=document.getElementById('pw').value;
-  msg.textContent='Issuing code…';
-  try{
-    var r=await fetch('/api/admin/issue-code',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+pw},body:JSON.stringify({note:document.getElementById('issueNote').value})});
-    var d=await r.json(); if(!r.ok) throw new Error(d.error||'Could not issue code.');
-    msg.textContent='ONE-TIME CODE: '+d.code+' (valid for 15 minutes)';
-  }catch(e){msg.textContent=e.message;}
-};
 document.getElementById('load').onclick = async function(){
   var btn=this, msg=document.getElementById('msg'), list=document.getElementById('list');
   msg.textContent='';btn.disabled=true;list.textContent='Loading…';

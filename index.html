@@ -162,15 +162,10 @@ body.in-app .bism{font-size:24px;margin-top:4px}
       <li>Save your favourite Doas and count your repetitions</li>
     </ul>
     <button class="btn" id="cardPay" type="button">Pay by card</button>
-    <div class="qrpay"><img src="/payment-qr-v2.png" alt="Scan this QR code to pay with any UPI app"><div>Scan to pay with any UPI app</div></div>
+    <div class="qrpay"><img src="/payment-qr-v3.png" alt="Scan this QR code to pay 1200 INR with any UPI app"><div><strong>Amount: ₹1,200 INR / $16</strong></div><div>Scan to pay with any UPI app</div></div>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
-    <div class="claim" id="claimBox">
-      <p class="claim-lead">After payment is verified, enter your one-time unlock code.</p>
-      <input id="payNote" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="One-time unlock code" maxlength="32">
-      <button class="btn small" id="claimBtn" type="button">Unlock with code</button>
-      <p class="msg" id="claimMsg" role="status" aria-live="polite"></p>
-    </div>
+    <p class="msg" role="status" aria-live="polite">Access remains locked until an automatic payment gateway is connected.</p>
   </section>
 
   <!-- App -->
@@ -263,9 +258,8 @@ function showPaywall(note){
   setWallMsg(note||'',false);
   api('/api/config').then(function(cfg){
     state.cfg=cfg;
-    $('cardPay').textContent='Show UPI payment QR';
+    $('cardPay').textContent='Open payment page';
     $('cardPay').disabled=!cfg.checkoutReady;
-    $('claimBox').hidden=!cfg.checkoutReady;
     if(!cfg.checkoutReady){
       setWallMsg('Payments are being set up. Please check back soon.',false);
     }
@@ -276,21 +270,7 @@ function showPaywall(note){
 }
 
 function payWithCard(){
-  var qr=document.querySelector('.qrpay');
-  if(qr){qr.scrollIntoView({behavior:'smooth',block:'center'});}
-  setWallMsg('Scan the QR code with your UPI app. After you pay and it is verified, enter the one-time code issued by the administrator.',false);
-}
-
-function claimPaid(){
-  var note=$('payNote').value.trim(),btn=$('claimBtn');
-  btn.disabled=true;setClaimMsg('Unlocking…',false);
-  api('/api/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:note})}).then(function(d){
-    store.set(TOKEN_KEY,d.token);
-    return openWithToken(d.token);
-  }).catch(function(e){
-    btn.disabled=false;
-    setClaimMsg(e.message||'Could not unlock right now. Please try again.',true);
-  });
+  window.location.href='/payment.html';
 }
 
 /* ---------- unlock + content ---------- */
@@ -501,8 +481,6 @@ document.addEventListener('click',function(e){
   }
 });
 $('cardPay').addEventListener('click',payWithCard);
-$('claimBtn').addEventListener('click',claimPaid);
-$('payNote').addEventListener('keydown',function(e){if(e.key==='Enter')claimPaid();});
 $('q').addEventListener('input',function(e){state.q=e.target.value;renderList();});
 
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
