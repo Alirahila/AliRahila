@@ -80,7 +80,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 .btn[disabled]{opacity:.55;cursor:not-allowed}
 .msg{margin:14px auto 0;max-width:420px;font-size:16px;color:var(--cream-dim)}
 .msg.err{color:var(--danger)}
-.testnote{margin:14px auto 0;max-width:420px;padding:8px 12px;border:1px dashed var(--gold);border-radius:10px;font-size:15px;color:var(--gold)}
+.qrpay{margin:22px auto 0;max-width:360px;text-align:center;color:var(--cream-dim);font-size:15px}.qrpay img{display:block;width:100%;height:auto;border-radius:14px;margin:0 auto 10px}.testnote{margin:14px auto 0;max-width:420px;padding:8px 12px;border:1px dashed var(--gold);border-radius:10px;font-size:15px;color:var(--gold)}
 
 /* Toolbar */
 .toolbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--wall);padding:12px 0 8px;border-bottom:1px solid var(--line)}
@@ -162,6 +162,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
       <li>Save your favourite Doas and count your repetitions</li>
     </ul>
     <button class="btn" id="cardPay" type="button">Pay by card</button>
+    <div class="qrpay"><img src="/payment-qr.png" alt="Scan this QR code to pay with any UPI app"><div>Scan to pay with any UPI app</div></div>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
     <div class="claim" id="claimBox">
@@ -262,7 +263,7 @@ function showPaywall(note){
   setWallMsg(note||'',false);
   api('/api/config').then(function(cfg){
     state.cfg=cfg;
-    $('cardPay').textContent='Pay by card — '+cfg.priceLabel;
+    $('cardPay').textContent='Pay — '+cfg.priceLabel;
     $('cardPay').disabled=!cfg.checkoutReady;
     $('claimBox').hidden=!cfg.checkoutReady;
     if(!cfg.checkoutReady){
