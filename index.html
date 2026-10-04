@@ -166,9 +166,9 @@ body.in-app .bism{font-size:24px;margin-top:4px}
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
     <div class="claim" id="claimBox">
-      <p class="claim-lead">Already paid?</p>
-      <input id="payNote" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="Your name or payment reference (optional)" maxlength="200">
-      <button class="btn small" id="claimBtn" type="button">I've paid — Unlock</button>
+      <p class="claim-lead">After payment is verified, enter your one-time unlock code.</p>
+      <input id="payNote" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="One-time unlock code" maxlength="32">
+      <button class="btn small" id="claimBtn" type="button">Unlock with code</button>
       <p class="msg" id="claimMsg" role="status" aria-live="polite"></p>
     </div>
   </section>
@@ -263,7 +263,7 @@ function showPaywall(note){
   setWallMsg(note||'',false);
   api('/api/config').then(function(cfg){
     state.cfg=cfg;
-    $('cardPay').textContent='Pay — '+cfg.priceLabel;
+    $('cardPay').textContent='Show UPI payment QR';
     $('cardPay').disabled=!cfg.checkoutReady;
     $('claimBox').hidden=!cfg.checkoutReady;
     if(!cfg.checkoutReady){
@@ -276,14 +276,15 @@ function showPaywall(note){
 }
 
 function payWithCard(){
-  if(!state.cfg||!state.cfg.checkoutUrl)return;
-  window.open(state.cfg.checkoutUrl,'_blank','noopener');
+  var qr=document.querySelector('.qrpay');
+  if(qr){qr.scrollIntoView({behavior:'smooth',block:'center'});}
+  setWallMsg('Scan the QR code with your UPI app. After you pay and it is verified, enter the one-time code issued by the administrator.',false);
 }
 
 function claimPaid(){
   var note=$('payNote').value.trim(),btn=$('claimBtn');
   btn.disabled=true;setClaimMsg('Unlocking…',false);
-  api('/api/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:note})}).then(function(d){
+  api('/api/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:note})}).then(function(d){
     store.set(TOKEN_KEY,d.token);
     return openWithToken(d.token);
   }).catch(function(e){
