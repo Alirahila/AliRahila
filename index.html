@@ -65,14 +65,10 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 .incl li{position:relative;padding:8px 0 8px 26px;border-top:1px solid var(--line)}
 .incl li:first-child{border-top:0}
 .incl li::before{content:"";position:absolute;left:4px;top:17px;width:9px;height:9px;border-radius:50%;background:var(--pink)}
-.upi{margin-top:28px;padding-top:22px;border-top:1px solid var(--line)}
-.upi-or{position:relative;text-align:center;margin:0 0 18px;height:1px;background:var(--line)}
-.upi-or span{position:relative;top:-11px;background:var(--wall);padding:0 12px;color:var(--cream-dim);font-size:14px;font-style:italic}
-.upi-qr{display:block;width:100%;max-width:280px;height:auto;margin:0 auto;border-radius:14px}
-.upi-steps{max-width:340px;margin:14px auto 4px;color:var(--cream-dim);font-size:15.5px;text-align:center}
-.redeem{max-width:340px;margin:14px auto 0}
-.redeem input{width:100%;box-sizing:border-box;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--wall-2);color:var(--cream);padding:0 14px;font:inherit;font-size:17px;text-align:center;letter-spacing:.02em}
 .btn.small{margin-top:10px;min-height:46px;font-size:17px}
+.claim{margin-top:28px;padding-top:22px;border-top:1px solid var(--line);max-width:340px;margin-left:auto;margin-right:auto}
+.claim-lead{text-align:center;color:var(--cream-dim);font-size:15px;margin:0 0 12px;font-style:italic}
+.claim input{width:100%;box-sizing:border-box;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--wall-2);color:var(--cream);padding:0 14px;font:inherit;font-size:17px;text-align:center}
 .btn.outline{background:transparent;border:1.5px solid var(--pink);color:var(--pink);margin-top:12px}
 .btn.outline:hover{background:rgba(242,163,192,.08)}
 .ck-title{margin:0 0 10px;font-size:24px;font-weight:600;color:var(--cream)}
@@ -167,17 +163,12 @@ body.in-app .bism{font-size:24px;margin-top:4px}
     </ul>
     <button class="btn" id="cardPay" type="button">Pay by card</button>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
-    <p class="testnote" id="cardTestnote" hidden>Test mode: no real money is charged.</p>
 
-    <div class="upi" id="upiBox">
-      <p class="upi-or"><span>or</span></p>
-      <img class="upi-qr" src="/upi-qr.png" width="760" height="809" alt="UPI QR code, pre-filled to pay the yearly plan amount" loading="lazy">
-      <p class="upi-steps">Scan with any UPI app to pay, then tap below to unlock right away.</p>
-      <div class="redeem">
-        <input id="upiNote" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="Your name or UPI ref (optional)" maxlength="200">
-        <button class="btn small" id="claimBtn" type="button">I've paid — Unlock</button>
-        <p class="msg" id="redeemMsg" role="status" aria-live="polite"></p>
-      </div>
+    <div class="claim" id="claimBox">
+      <p class="claim-lead">Already paid?</p>
+      <input id="payNote" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="Your name or payment reference (optional)" maxlength="200">
+      <button class="btn small" id="claimBtn" type="button">I've paid — Unlock</button>
+      <p class="msg" id="claimMsg" role="status" aria-live="polite"></p>
     </div>
   </section>
 
@@ -262,21 +253,20 @@ function show(which){
   $('app').hidden=which!=='app';
 }
 
-/* ---------- paywall + Stripe card checkout ---------- */
+/* ---------- paywall + payment link ---------- */
 function setWallMsg(text,isErr){var m=$('wallmsg');m.textContent=text||'';m.classList.toggle('err',!!isErr);}
-function setBusy(b){state.busy=b;$('cardPay').disabled=b;}
+function setClaimMsg(text,isErr){var m=$('claimMsg');m.textContent=text||'';m.classList.toggle('err',!!isErr);}
 
 function showPaywall(note){
   show('paywall');
   setWallMsg(note||'',false);
   api('/api/config').then(function(cfg){
     state.cfg=cfg;
-    var stripeOk=(cfg.stripeMode==='test'||cfg.stripeMode==='live');
-    $('cardPay').textContent='Pay by card — $'+cfg.amountUsd+' / year';
-    $('cardPay').disabled=!stripeOk;
-    $('cardTestnote').hidden=cfg.stripeMode!=='test';
-    if(!stripeOk){
-      setWallMsg(cfg.stripeMode==='invalid'?'Card payments are not available right now. Please try again later.':'Card payments are being set up. Please check back soon, or pay via UPI below.',false);
+    $('cardPay').textContent='Pay by card — '+cfg.priceLabel;
+    $('cardPay').disabled=!cfg.checkoutReady;
+    $('claimBox').hidden=!cfg.checkoutReady;
+    if(!cfg.checkoutReady){
+      setWallMsg('Payments are being set up. Please check back soon.',false);
     }
   }).catch(function(){
     $('cardPay').disabled=true;
@@ -285,12 +275,19 @@ function showPaywall(note){
 }
 
 function payWithCard(){
-  if(state.busy)return;
-  setBusy(true);setWallMsg('Opening secure card payment…',false);
-  api('/api/stripe-session',{method:'POST'}).then(function(o){
-    location.href=o.url;
+  if(!state.cfg||!state.cfg.checkoutUrl)return;
+  window.open(state.cfg.checkoutUrl,'_blank','noopener');
+}
+
+function claimPaid(){
+  var note=$('payNote').value.trim(),btn=$('claimBtn');
+  btn.disabled=true;setClaimMsg('Unlocking…',false);
+  api('/api/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:note})}).then(function(d){
+    store.set(TOKEN_KEY,d.token);
+    return openWithToken(d.token);
   }).catch(function(e){
-    setBusy(false);setWallMsg(e.message||'Could not start the payment. Please try again.',true);
+    btn.disabled=false;
+    setClaimMsg(e.message||'Could not unlock right now. Please try again.',true);
   });
 }
 
@@ -308,31 +305,14 @@ function startApp(doas){
   show('app');
 }
 
-function consumeHash(){
-  if(!location.hash||location.hash.length<2)return null;
-  var p=new URLSearchParams(location.hash.slice(1));
-  history.replaceState(null,'',location.pathname+location.search);
-  return p;
-}
-
 function boot(){
-  var fromRedirect=consumeHash();
-  if(fromRedirect&&fromRedirect.has('token')){
-    var t=fromRedirect.get('token');
-    store.set(TOKEN_KEY,t);
-    openWithToken(t).catch(function(){
-      showPaywall('We could not confirm the payment. If money was deducted, it will be refunded by Razorpay.');
-    });
-    return;
-  }
-  var carriedNote=(fromRedirect&&fromRedirect.get('pay_error'))||null;
   var token=store.get(TOKEN_KEY,null);
-  if(!token){showPaywall(carriedNote);return;}
+  if(!token){showPaywall();return;}
   openWithToken(token).catch(function(e){
-    if(e&&e.status===401){store.del(TOKEN_KEY);store.del(CACHE_KEY);showPaywall('Your subscription has ended or could not be confirmed. Subscribe to continue.');return;}
+    if(e&&e.status===401){store.del(TOKEN_KEY);store.del(CACHE_KEY);showPaywall('Your subscription has ended. Please pay again to continue.');return;}
     var c=store.get(CACHE_KEY,null);
     if(c&&c.doas&&c.exp>Date.now()){startApp(c.doas);return;}
-    showPaywall(carriedNote||'Could not reach the server. Check your internet connection.');
+    showPaywall('Could not reach the server. Check your internet connection.');
   });
 }
 
@@ -520,21 +500,9 @@ document.addEventListener('click',function(e){
   }
 });
 $('cardPay').addEventListener('click',payWithCard);
+$('claimBtn').addEventListener('click',claimPaid);
+$('payNote').addEventListener('keydown',function(e){if(e.key==='Enter')claimPaid();});
 $('q').addEventListener('input',function(e){state.q=e.target.value;renderList();});
-$('claimBtn').addEventListener('click',claimUpi);
-$('upiNote').addEventListener('keydown',function(e){if(e.key==='Enter')claimUpi();});
-
-function claimUpi(){
-  var note=$('upiNote').value.trim(),msg=$('redeemMsg'),btn=$('claimBtn');
-  btn.disabled=true;msg.textContent='Unlocking…';msg.classList.remove('err');
-  api('/api/upi-claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:note})}).then(function(d){
-    store.set(TOKEN_KEY,d.token);
-    return openWithToken(d.token);
-  }).catch(function(e){
-    btn.disabled=false;
-    msg.textContent=e.message||'Could not unlock right now. Please try again.';msg.classList.add('err');
-  });
-}
 
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
 boot();

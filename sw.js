@@ -1,6 +1,6 @@
 /* Network-first shell cache so the app opens offline. API calls are never cached here. */
-const CACHE = 'doas-shell-v5';
-const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/mosque.jpg', '/upi-qr.png'];
+const CACHE = 'doas-shell-v7';
+const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/mosque.jpg'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
