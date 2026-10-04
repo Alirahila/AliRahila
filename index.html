@@ -298,13 +298,7 @@ function boot(){
     return;
   }
   var token=store.get(TOKEN_KEY,null);
-  if(!token){
-    api('/api/access').then(function(d){
-      store.set(TOKEN_KEY,d.token);
-      return openWithToken(d.token);
-    }).catch(function(){showPaywall('Could not open the app. Please try again.',true);});
-    return;
-  }
+  if(!token){showPaywall();return;}
   openWithToken(token).catch(function(e){
     store.del(TOKEN_KEY);store.del(CACHE_KEY);
     if(e&&e.status===401){showPaywall('Your payment access is no longer valid. Please pay and enter a new unlock code.');return;}
