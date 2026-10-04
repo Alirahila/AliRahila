@@ -311,10 +311,9 @@ function boot(){
   var token=store.get(TOKEN_KEY,null);
   if(!token){showPaywall();return;}
   openWithToken(token).catch(function(e){
-    if(e&&e.status===401){store.del(TOKEN_KEY);store.del(CACHE_KEY);showPaywall('Your subscription has ended. Please pay again to continue.');return;}
-    var c=store.get(CACHE_KEY,null);
-    if(c&&c.doas&&c.exp>Date.now()){startApp(c.doas);return;}
-    showPaywall('Could not reach the server. Check your internet connection.');
+    store.del(TOKEN_KEY);store.del(CACHE_KEY);
+    if(e&&e.status===401){showPaywall('Your payment access is no longer valid. Please pay and enter a new unlock code.');return;}
+    showPaywall('Could not verify access with the server. Connect to the internet and try again.');
   });
 }
 
