@@ -121,12 +121,14 @@ async function handleApi(req, res, url) {
     return send(res, 200, { checkoutReady: !!CHECKOUT_URL, checkoutUrl: CHECKOUT_URL, priceLabel: PRICE_LABEL });
   }
 
-  // UPI has no webhook here; this is an honor-system post-payment access link.
+  // UPI has no webhook here; this is an honor-system reference entry, not verification.
   if (req.method === 'GET' && url.pathname === '/api/access') {
+    const ref = String(url.searchParams.get('ref') || '').trim();
+    if (!/^\d{4}$/.test(ref)) return send(res, 400, { error: 'Enter the last 4 digits of the transaction reference.' });
     const now = Date.now();
     const exp = now + PLAN_DAYS * 86400000;
     const token = signToken({ src: 'honor-system-payment-link', exp });
-    addClaim({ ts: now, note: 'honor-system-payment-link', ip: ip ? ip.replace(/\.\d+$/, '.xxx') : '', verified: false });
+    addClaim({ ts: now, note: 'transaction-ref-last4:' + ref, ip: ip ? ip.replace(/\.\d+$/, '.xxx') : '', verified: false });
     return send(res, 200, { token, exp });
   }
 

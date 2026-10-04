@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>My Doas — Payment</title>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#26262a;color:#f4ebd8;font:16px/1.5 Georgia,serif;padding:28px 18px 60px}.wrap{max-width:520px;margin:0 auto;text-align:center}h1{font-size:28px;margin:8px 0}.sub{color:#bfb7a6;margin:0 0 22px}.amount{font-size:22px;font-weight:700;color:#f2a3c0;margin:12px 0 18px}.qr{display:block;width:min(100%,460px);height:auto;margin:0 auto;border-radius:16px;background:#fff}.hint{color:#bfb7a6;margin:16px 0}.upi{display:inline-block;padding:13px 22px;border-radius:24px;background:#f2a3c0;color:#2a1f25;text-decoration:none;font-weight:700}.back{display:inline-block;margin-top:20px;color:#f2a3c0}
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#26262a;color:#f4ebd8;font:16px/1.5 Georgia,serif;padding:28px 18px 60px}.wrap{max-width:520px;margin:0 auto;text-align:center}h1{font-size:28px;margin:8px 0}.sub{color:#bfb7a6;margin:0 0 22px}.amount{font-size:22px;font-weight:700;color:#f2a3c0;margin:12px 0 18px}.qr{display:block;width:min(100%,460px);height:auto;margin:0 auto;border-radius:16px;background:#fff}.hint{color:#bfb7a6;margin:16px 0}.upi{display:inline-block;padding:13px 22px;border-radius:24px;background:#f2a3c0;color:#2a1f25;text-decoration:none;font-weight:700}.access{margin:24px 0}.access label{display:block;color:#bfb7a6;margin-bottom:8px}.access input{display:block;width:160px;margin:0 auto 12px;padding:10px;border-radius:8px;border:1px solid #8f8790;text-align:center;font-size:20px;letter-spacing:4px}.back{display:inline-block;margin-top:20px;color:#f2a3c0}
 </style></head>
 <body><main class="wrap">
 <h1>Pay for My Doas</h1>
@@ -14,5 +14,21 @@
 <a href="upi://pay?pa=rahila19@okicici&amp;pn=Rahila%20Ali&amp;am=1200.00&amp;cu=INR" aria-label="Open UPI payment for 1200 INR"><img class="qr" src="/payment-qr-v5.png" alt="UPI payment QR for 1200 INR"></a>
 <p class="hint">The QR is set to request exactly ₹1,200 INR.</p>
 <p class="hint"><strong>To pay:</strong> open Google Pay, PhonePe, Paytm, or another UPI app separately, choose <em>Scan QR</em>, and scan the code above.</p>
-<a class="upi" href="/?access=paid">I have completed payment — access the app now</a><br><a class="back" href="/">Return to My Doas</a>
+<form id="accessForm" class="access" autocomplete="off">
+<label for="ref">After payment, enter the last 4 digits of your transaction reference</label>
+<input id="ref" name="ref" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" minlength="4" required placeholder="Last 4 digits" aria-label="Last 4 digits of transaction reference">
+<button class="upi" type="submit">Confirm payment &amp; access the app</button>
+<p id="accessMsg" class="hint" role="status"></p>
+</form>
+<a class="back" href="/">Return to My Doas</a>
+<script>
+document.getElementById('accessForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var ref=document.getElementById('ref').value.trim();
+  var msg=document.getElementById('accessMsg');
+  if(!/^\d{4}$/.test(ref)){msg.textContent='Enter exactly 4 digits.';return;}
+  msg.textContent='Opening the app…';
+  location.href='/?access=paid&ref='+encodeURIComponent(ref);
+});
+</script>
 </main></body></html>

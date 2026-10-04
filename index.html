@@ -296,7 +296,7 @@ function boot(){
     return;
   }
   if(qs.get('access')==='paid'){
-    api('/api/access').then(function(d){
+    api('/api/access?ref='+encodeURIComponent(qs.get('ref')||'')).then(function(d){
       store.set(TOKEN_KEY,d.token);
       history.replaceState({},'',location.pathname);
       return openWithToken(d.token);
