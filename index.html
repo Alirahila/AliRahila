@@ -289,6 +289,12 @@ function startApp(doas){
 
 function boot(){
   var qs=new URLSearchParams(location.search);
+  if(qs.get('landing')==='1'){
+    store.del(TOKEN_KEY); store.del(CACHE_KEY);
+    history.replaceState({},'',location.pathname);
+    showPaywall();
+    return;
+  }
   if(qs.get('access')==='paid'){
     api('/api/access').then(function(d){
       store.set(TOKEN_KEY,d.token);
