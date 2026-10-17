@@ -81,6 +81,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 .msg{margin:14px auto 0;max-width:420px;font-size:16px;color:var(--cream-dim)}
 .msg.err{color:var(--danger)}
 .qrpay{margin:22px auto 0;max-width:360px;text-align:center;color:var(--cream-dim);font-size:15px}.qrpay img{display:block;width:100%;height:auto;border-radius:14px;margin:0 auto 10px}.testnote{margin:14px auto 0;max-width:420px;padding:8px 12px;border:1px dashed var(--gold);border-radius:10px;font-size:15px;color:var(--gold)}
+.prayer{margin:28px auto 0;padding:18px 16px;border:1px solid var(--line);border-radius:16px;background:rgba(0,0,0,.14);text-align:left;max-width:520px}.prayer h2{margin:0;color:var(--cream);font-size:23px}.prayer .pmeta{margin:2px 0 12px;color:var(--cream-dim);font-size:14px}.prayer-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.ptimebox{padding:8px 4px;border:1px solid var(--line);border-radius:10px;text-align:center}.ptimebox b{display:block;color:var(--pink);font-size:13px}.ptimebox span{display:block;margin-top:2px;font-size:14px}.prayer button{margin-top:12px;width:100%;min-height:40px;border:1px solid var(--pink);border-radius:20px;color:var(--pink);font-size:15px}.prayer .pnote{margin:10px 0 0;color:var(--cream-dim);font-size:13px}@media(max-width:420px){.prayer-grid{gap:3px}.ptimebox{padding:7px 1px}.ptimebox span{font-size:12px}}
 
 /* Toolbar */
 .toolbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--wall);padding:12px 0 8px;border-bottom:1px solid var(--line)}
@@ -165,7 +166,21 @@ body.in-app .bism{font-size:24px;margin-top:4px}
     <div class="qrpay"><img src="/payment-qr-v5.png" alt="Scan this QR code to pay 1200 INR with any UPI app"><div><strong>Amount: ₹1,200 INR / $16</strong></div><div>Scan to pay with any UPI app</div></div>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
-    <p class="msg" role="status" aria-live="polite">Access remains locked until an automatic payment gateway is connected.</p>
+    <p class="msg" role="status" aria-live="polite">After paying, enter the last 4 digits of your transaction reference to request access.</p>
+    <div class="claim" aria-labelledby="claimTitle">
+      <h2 class="ck-title" id="claimTitle">Already paid?</h2>
+      <p class="claim-lead">Enter the last 4 digits of your payment reference.</p>
+      <input id="claimRef" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" placeholder="Last 4 digits" aria-label="Last 4 digits of transaction reference">
+      <button class="btn outline" id="claimBtn" type="button">Unlock my app</button>
+      <p class="msg" id="claimMsg" role="status" aria-live="polite"></p>
+    </div>
+    <section class="prayer" id="prayerLanding" aria-labelledby="prayerTitle">
+      <h2 id="prayerTitle">Today’s prayer times</h2>
+      <p class="pmeta" id="prayerMeta">Allow location access to calculate local times.</p>
+      <div class="prayer-grid" id="prayerGrid"><div class="pnote">Your location is used only to request today’s prayer times. <a href="/privacy.html">Privacy</a></div></div>
+      <button id="locatePrayer" type="button">Use my location</button>
+      <p class="pnote">Times follow your local time zone and adjust automatically for daylight-saving changes.</p>
+    </section>
   </section>
 
   <!-- App -->
@@ -256,6 +271,7 @@ function setClaimMsg(text,isErr){var m=$('claimMsg');m.textContent=text||'';m.cl
 function showPaywall(note){
   show('paywall');
   setWallMsg(note||'',false);
+  loadPrayerTimes();
   api('/api/config').then(function(cfg){
     state.cfg=cfg;
     $('cardPay').textContent='Open payment page';
@@ -271,6 +287,43 @@ function showPaywall(note){
 
 function payWithCard(){
   window.location.href='/payment.html';
+}
+function claimAccess(){
+  var input=$('claimRef'),btn=$('claimBtn'),value=(input.value||'').replace(/\D/g,'').slice(-4);
+  input.value=value;
+  if(!/^\d{4}$/.test(value)){setClaimMsg('Please enter exactly 4 digits from your transaction reference.',true);input.focus();return;}
+  btn.disabled=true;setClaimMsg('Requesting access…',false);
+  fetch('/api/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({last4:value})})
+    .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok){var e=new Error(d.error||'Could not unlock the app.');e.status=r.status;throw e;}return d;});})
+    .then(function(d){store.set(TOKEN_KEY,d.token);return openWithToken(d.token);})
+    .catch(function(e){setClaimMsg(e.message||'Could not unlock the app. Please try again.',true);btn.disabled=false;});
+}
+
+/* ---------- local prayer times ---------- */
+var prayerLoaded=false;
+function fmtPrayerTime(v){
+  var m=String(v||'').match(/^(\d{1,2}):(\d{2})/); if(!m)return v||'—';
+  var h=Number(m[1]),min=m[2],ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+min+' '+ap;
+}
+function prayerDate(){var d=new Date();return ('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();}
+function loadPrayerTimes(){
+  if(prayerLoaded)return; prayerLoaded=true;
+  var meta=$('prayerMeta'),grid=$('prayerGrid'),btn=$('locatePrayer');
+  function fail(){meta.textContent='Location permission is needed for accurate local prayer times.';grid.innerHTML='<div class="pnote">Tap “Use my location” to calculate Fajr, Dhuhr, Asr, Maghrib and Isha.</div>';btn.disabled=false;}
+  function run(pos){
+    var lat=pos.coords.latitude.toFixed(5),lon=pos.coords.longitude.toFixed(5),tz='UTC';
+    try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch(e){}
+    meta.textContent='Calculating for '+tz+'…';
+    var url='https://api.aladhan.com/v1/timings/'+prayerDate()+'?latitude='+lat+'&longitude='+lon+'&method=3&school=0&timezonestring='+encodeURIComponent(tz);
+    fetch(url).then(function(r){return r.json();}).then(function(d){
+      var t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');
+      meta.textContent='Local times for '+tz+' · '+(d.data.date&&d.data.date.readable||'today');
+      grid.innerHTML=[['Fajr',t.Fajr],['Dhuhr',t.Dhuhr],['Asr',t.Asr],['Maghrib',t.Maghrib],['Isha',t.Isha]].map(function(x){return '<div class="ptimebox"><b>'+x[0]+'</b><span>'+fmtPrayerTime(x[1])+'</span></div>';}).join('');
+      btn.textContent='Refresh prayer times';btn.disabled=false;btn.onclick=function(){prayerLoaded=false;loadPrayerTimes();};
+    }).catch(fail);
+  }
+  btn.onclick=function(){btn.disabled=true;if(!navigator.geolocation){fail();return;}navigator.geolocation.getCurrentPosition(run,fail,{enableHighAccuracy:false,timeout:12000,maximumAge:900000});};
+  if(navigator.permissions&&navigator.permissions.query){navigator.permissions.query({name:'geolocation'}).then(function(p){if(p.state==='granted')btn.click();}).catch(function(){});}
 }
 
 /* ---------- unlock + content ---------- */
@@ -296,11 +349,8 @@ function boot(){
     return;
   }
   if(qs.get('access')==='paid'){
-    api('/api/access?ref='+encodeURIComponent(qs.get('ref')||'')).then(function(d){
-      store.set(TOKEN_KEY,d.token);
-      history.replaceState({},'',location.pathname);
-      return openWithToken(d.token);
-    }).catch(function(){showPaywall('Could not open the app. Please try the access link again.',true);});
+    history.replaceState({},'',location.pathname);
+    showPaywall('Automatic payment confirmation is required before access can be granted.',true);
     return;
   }
   var token=store.get(TOKEN_KEY,null);
@@ -496,6 +546,8 @@ document.addEventListener('click',function(e){
   }
 });
 $('cardPay').addEventListener('click',payWithCard);
+$('claimBtn').addEventListener('click',claimAccess);
+$('claimRef').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4);});
 $('q').addEventListener('input',function(e){state.q=e.target.value;renderList();});
 
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}

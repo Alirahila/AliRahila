@@ -121,23 +121,17 @@ async function handleApi(req, res, url) {
     return send(res, 200, { checkoutReady: !!CHECKOUT_URL, checkoutUrl: CHECKOUT_URL, priceLabel: PRICE_LABEL });
   }
 
-  // UPI has no webhook here; this is an honor-system reference entry, not verification.
-  if (req.method === 'GET' && url.pathname === '/api/access') {
-    const ref = String(url.searchParams.get('ref') || '').trim();
-    if (!/^\d{4}$/.test(ref)) return send(res, 400, { error: 'Enter the last 4 digits of the transaction reference.' });
+  // Option 1: self-reported last-four-digit claim. This is not automatic payment verification.
+  if (req.method === 'POST' && url.pathname === '/api/access') {
+    if (limited(ip, 8)) return send(res, 429, { error: 'Too many attempts. Please wait a minute and try again.' });
+    let body;
+    try { body = await readBody(req, 4096); } catch (e) { return send(res, 400, { error: 'Invalid request.' }); }
+    const last4 = String(body.last4 || '').replace(/\D/g, '').slice(-4);
+    if (!/^\d{4}$/.test(last4)) return send(res, 400, { error: 'Enter exactly 4 digits from your transaction reference.' });
     const now = Date.now();
     const exp = now + PLAN_DAYS * 86400000;
-    const token = signToken({ src: 'honor-system-payment-link', exp });
-    addClaim({ ts: now, note: 'transaction-ref-last4:' + ref, ip: ip ? ip.replace(/\.\d+$/, '.xxx') : '', verified: false });
-    return send(res, 200, { token, exp });
-  }
-
-  if (req.method === 'POST' && url.pathname === '/api/claim') {
-    return send(res, 410, { error: 'Self-unlock is disabled. Enter the one-time code issued after payment is verified.' });
-  }
-
-  if (req.method === 'POST' && (url.pathname === '/api/admin/issue-code' || url.pathname === '/api/redeem')) {
-    return send(res, 410, { error: 'Manual unlock is disabled until automatic payment verification is integrated.' });
+    addClaim({ ts: new Date(now).toISOString(), last4, ip });
+    return send(res, 200, { token: signToken({ sub: 'self-reported-payment', last4, iat: now, exp }), exp, selfReported: true });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/admin/claims') {
@@ -211,7 +205,7 @@ button:disabled{opacity:.5}
 a{color:#f2a3c0}
 </style></head><body><div class="wrap">
 <h1>Payment claims log</h1>
-<p class="sub">Verify a payment in your UPI app first, then issue a one-time unlock code. Codes expire in 15 minutes and work once.</p>
+<p class="sub">Review self-reported last-four-digit access claims here and reconcile them against your UPI records.</p>
 <label for="pw">Admin passphrase</label>
 <input id="pw" type="password" autocomplete="off">
 <button id="load">Load claims</button>
