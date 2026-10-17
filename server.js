@@ -121,17 +121,9 @@ async function handleApi(req, res, url) {
     return send(res, 200, { checkoutReady: !!CHECKOUT_URL, checkoutUrl: CHECKOUT_URL, priceLabel: PRICE_LABEL });
   }
 
-  // Option 1: self-reported last-four-digit claim. This is not automatic payment verification.
+  // Access remains locked until a verified payment gateway is connected.
   if (req.method === 'POST' && url.pathname === '/api/access') {
-    if (limited(ip, 8)) return send(res, 429, { error: 'Too many attempts. Please wait a minute and try again.' });
-    let body;
-    try { body = await readBody(req, 4096); } catch (e) { return send(res, 400, { error: 'Invalid request.' }); }
-    const last4 = String(body.last4 || '').replace(/\D/g, '').slice(-4);
-    if (!/^\d{4}$/.test(last4)) return send(res, 400, { error: 'Enter exactly 4 digits from your transaction reference.' });
-    const now = Date.now();
-    const exp = now + PLAN_DAYS * 86400000;
-    addClaim({ ts: new Date(now).toISOString(), last4, ip });
-    return send(res, 200, { token: signToken({ sub: 'self-reported-payment', last4, iat: now, exp }), exp, selfReported: true });
+    return send(res, 410, { error: 'Verified payment is required before access can be granted.' });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/admin/claims') {

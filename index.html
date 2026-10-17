@@ -157,6 +157,8 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 
   <!-- Front page -->
   <section class="plan" id="paywall" hidden>
+    <nav class="tabs" id="landingTabs" aria-label="Landing sections"><button class="tab active" id="doasLandingTab" type="button" aria-current="page">My Doas</button><button class="tab" id="athanLandingTab" type="button">Athan</button></nav>
+    <div id="doasLandingContent">
     <ul class="incl">
       <li>Every Quranic Doa in clear Arabic, with transliteration and meaning</li>
       <li>Recitation audio for each Doa</li>
@@ -164,26 +166,21 @@ body.in-app .bism{font-size:24px;margin-top:4px}
       <li>Save your favourite Doas and count your repetitions</li>
     </ul>
     <button class="btn" id="cardPay" type="button">Open payment page</button>
+    <button class="btn outline" id="installBtn" type="button" hidden>Install My Doas App</button>
     <div class="qrpay"><img src="/payment-qr-v5.png" alt="Scan this QR code to pay 1200 INR with any UPI app"><div><strong>Amount: ₹1,200 INR / $16</strong></div><div>Scan to pay with any UPI app</div></div>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
-    <p class="msg" role="status" aria-live="polite">After paying, enter the last 4 digits of your transaction reference to request access.</p>
-    <p class="msg">This QR flow records a self-reported claim. It cannot verify the payment itself.</p>
-    <div class="claim" aria-labelledby="claimTitle">
-      <h2 class="ck-title" id="claimTitle">Already paid?</h2>
-      <p class="claim-lead">Enter the last 4 digits of your payment reference.</p>
-      <input id="claimRef" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" placeholder="Last 4 digits" aria-label="Last 4 digits of transaction reference">
-      <button class="btn outline" id="claimBtn" type="button">Unlock my app</button>
-      <p class="msg" id="claimMsg" role="status" aria-live="polite"></p>
+    <p class="msg" role="status" aria-live="polite">Access opens only after a verified payment is received.</p>
+    <p class="msg">The current QR-only payment cannot verify transactions automatically. Please do not enter a reference number as a substitute for verification.</p>
     </div>
-    <section class="prayer" id="prayerLanding" aria-labelledby="prayerTitle">
+    <section class="prayer" id="prayerLanding" aria-labelledby="prayerTitle" hidden>
       <h2 id="prayerTitle">Today’s prayer times</h2>
       <p class="pmeta" id="prayerMeta">Allow location access to calculate local times.</p>
       <div class="prayer-grid" id="prayerGrid"><div class="pnote">Your location is used only to request today’s prayer times. <a href="/privacy.html">Privacy</a></div></div>
       <button id="locatePrayer" type="button">Use my location</button>
       <div class="location-tools" aria-label="Search prayer times by city">
-        <input id="cityName" type="text" placeholder="City" autocomplete="address-level2" aria-label="City">
-        <input id="countryName" type="text" placeholder="Country" autocomplete="country-name" aria-label="Country">
+        <input id="cityName" type="text" value="Bengaluru" placeholder="City" autocomplete="address-level2" aria-label="City">
+        <input id="countryName" type="text" value="India" placeholder="Country" autocomplete="country-name" aria-label="Country">
         <button id="cityPrayer" type="button">Search city</button>
       </div>
       <p class="pnote">Times use your local time zone and update automatically for daylight saving changes.</p>
@@ -274,38 +271,18 @@ function show(which){
 
 /* ---------- paywall + payment link ---------- */
 function setWallMsg(text,isErr){var m=$('wallmsg');m.textContent=text||'';m.classList.toggle('err',!!isErr);}
-function setClaimMsg(text,isErr){var m=$('claimMsg');m.textContent=text||'';m.classList.toggle('err',!!isErr);}
-
 function showPaywall(note){
   show('paywall');
+  var athanMode=new URLSearchParams(location.search).get('athan')==='1';
+  $('doasLandingContent').hidden=athanMode;
+  $('prayerLanding').hidden=!athanMode;
+  $('doasLandingTab').classList.toggle('active',!athanMode);$('doasLandingTab').toggleAttribute('aria-current',!athanMode);
+  $('athanLandingTab').classList.toggle('active',athanMode);$('athanLandingTab').toggleAttribute('aria-current',athanMode);
   setWallMsg(note||'',false);
-  loadPrayerTimes();
-  api('/api/config').then(function(cfg){
-    state.cfg=cfg;
-    $('cardPay').textContent='Open payment page';
-    $('cardPay').disabled=!cfg.checkoutReady;
-    if(!cfg.checkoutReady){
-      setWallMsg('Payments are being set up. Please check back soon.',false);
-    }
-  }).catch(function(){
-    $('cardPay').disabled=true;
-    setWallMsg('Could not reach the server. Check your internet connection and reopen the app.',true);
-  });
+  if(athanMode){loadPrayerTimes();setTimeout(function(){$('locatePrayer').click();},250);}
+  api('/api/config').then(function(cfg){state.cfg=cfg;$('cardPay').textContent='Open payment page';$('cardPay').disabled=!cfg.checkoutReady;if(!cfg.checkoutReady&&!athanMode)setWallMsg('Verified payment is not configured yet.',false);}).catch(function(){$('cardPay').disabled=true;if(!athanMode)setWallMsg('Could not reach the server.',true);});
 }
-
-function payWithCard(){
-  window.location.href='/payment.html';
-}
-function claimAccess(){
-  var input=$('claimRef'),btn=$('claimBtn'),value=(input.value||'').replace(/\D/g,'').slice(-4);
-  input.value=value;
-  if(!/^\d{4}$/.test(value)){setClaimMsg('Please enter exactly 4 digits from your transaction reference.',true);input.focus();return;}
-  btn.disabled=true;setClaimMsg('Requesting access…',false);
-  fetch('/api/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({last4:value})})
-    .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok){var e=new Error(d.error||'Could not unlock the app.');e.status=r.status;throw e;}return d;});})
-    .then(function(d){store.set(TOKEN_KEY,d.token);return openWithToken(d.token);})
-    .catch(function(e){setClaimMsg(e.message||'Could not unlock the app. Please try again.',true);btn.disabled=false;});
-}
+function payWithCard(){window.location.href='/payment.html';}
 
 /* ---------- local prayer times ---------- */
 var prayerLoaded=false;
@@ -318,8 +295,8 @@ function loadPrayerTimes(){
   if(prayerLoaded)return; prayerLoaded=true;
   var meta=$('prayerMeta'),grid=$('prayerGrid'),locBtn=$('locatePrayer'),cityBtn=$('cityPrayer');
   function fail(){
-    meta.textContent='Location permission unavailable. Finding an approximate location';
-    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){if(!d||!d.latitude||!d.longitude)throw Error('No approximate location');run({coords:{latitude:d.latitude,longitude:d.longitude}});}).catch(function(){meta.textContent='Allow location access or search for your city';grid.innerHTML='<div class="pnote">Use the city search below if location access is unavailable.</div>';locBtn.disabled=false;cityBtn.disabled=false;});
+    meta.textContent='Finding your approximate location';
+    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){if(!d||!d.latitude||!d.longitude)throw Error('No approximate location');run({coords:{latitude:d.latitude,longitude:d.longitude}});}).catch(function(){meta.textContent='Using Bengaluru India';searchCity();});
   }
   function render(t,tz,readable){
     meta.textContent='Local times for '+(tz||'your time zone')+' '+(readable||'today');
@@ -335,11 +312,11 @@ function loadPrayerTimes(){
   }
   function useLocation(){prayerLoaded=false;loadPrayerTimes();if(!navigator.geolocation){fail();return;}locBtn.disabled=true;navigator.geolocation.getCurrentPosition(run,fail,{enableHighAccuracy:false,timeout:15000,maximumAge:900000});}
   function searchCity(){
-    var city=($('cityName').value||'').trim(),country=($('countryName').value||'').trim();
+    var city=($('cityName').value||'Bengaluru').trim(),country=($('countryName').value||'India').trim();
     if(!city||!country){meta.textContent='Enter both city and country';return;}
     meta.textContent='Finding prayer times';locBtn.disabled=true;cityBtn.disabled=true;
     var url='https://api.aladhan.com/v1/timingsByCity/'+prayerDate()+'?city='+encodeURIComponent(city)+'&country='+encodeURIComponent(country)+'&method=3&school=0';
-    fetch(url).then(function(r){return r.json();}).then(function(d){var t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');render(t,Intl.DateTimeFormat().resolvedOptions().timeZone||'local time',city+' '+country);}).catch(fail);
+    fetch(url).then(function(r){return r.json();}).then(function(d){var t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');render(t,Intl.DateTimeFormat().resolvedOptions().timeZone||'local time',city+' '+country);}).catch(function(){meta.textContent='Enter another city and country';locBtn.disabled=false;cityBtn.disabled=false;});
   }
   locBtn.onclick=useLocation;cityBtn.onclick=searchCity;
   if(navigator.permissions&&navigator.permissions.query){navigator.permissions.query({name:'geolocation'}).then(function(x){if(x.state==='granted')useLocation();}).catch(function(){});}
@@ -361,9 +338,9 @@ function startApp(doas){
 
 function boot(){
   var qs=new URLSearchParams(location.search);
-  if(qs.get('landing')==='1'){
+  if(qs.get('landing')==='1'||qs.get('athan')==='1'){
     store.del(TOKEN_KEY); store.del(CACHE_KEY);
-    history.replaceState({},'',location.pathname);
+    history.replaceState({},'',location.pathname+(qs.get('athan')==='1'?'?athan=1':''));
     showPaywall();
     return;
   }
@@ -565,7 +542,12 @@ document.addEventListener('click',function(e){
   }
 });
 $('cardPay').addEventListener('click',payWithCard);
-$('prayerTab').addEventListener('click',function(){location.href='/?landing=1';});
+$('doasLandingTab').addEventListener('click',function(){location.href='/?landing=1';});
+$('athanLandingTab').addEventListener('click',function(){location.href='/?athan=1';});
+$('prayerTab').addEventListener('click',function(){location.href='/?athan=1';});
+var deferredInstall=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstall=e;$('installBtn').hidden=false;});
+$('installBtn').addEventListener('click',function(){if(!deferredInstall)return;deferredInstall.prompt();deferredInstall.userChoice.then(function(){deferredInstall=null;$('installBtn').hidden=true;});});
 $('claimBtn').addEventListener('click',claimAccess);
 $('claimRef').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4);});
 $('q').addEventListener('input',function(e){state.q=e.target.value;renderList();});
