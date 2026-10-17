@@ -39,7 +39,7 @@ body{
 }
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
-.wrap{max-width:640px;margin:0 auto;padding:0 20px}
+.wrap{max-width:640px;margin:0 auto;padding:0 20px}.page-mark{display:block;width:42px;height:42px;object-fit:cover;border-radius:50%;margin:12px auto 0;border:1px solid var(--gold)}.tabs{display:flex;gap:8px;margin:8px 0 12px;padding:4px;border:1px solid var(--line);border-radius:24px;background:rgba(0,0,0,.18)}.tab{flex:1;min-height:38px;border-radius:19px;color:var(--cream-dim);font-size:15px}.tab.active{background:var(--pink);color:#2a1f25;font-weight:600}
 [hidden]{display:none!important}
 
 /* Hero */
@@ -142,6 +142,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 
 <header class="hero">
   <div class="wrap">
+    <img class="page-mark" src="/mosque-icon.png" alt="Mosque icon">
     <img class="banner" src="/mosque.jpg" width="991" height="554" alt="Mosque domes and a minaret among clouds, with a gold arch border">
     <div class="head">
       <h1>My Doas App</h1>
@@ -162,7 +163,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
       <li>Surah Ad-Duha and the Doas from the last part of the Qur'an</li>
       <li>Save your favourite Doas and count your repetitions</li>
     </ul>
-    <button class="btn" id="cardPay" type="button">Pay by card</button>
+    <button class="btn" id="cardPay" type="button">Open payment page</button>
     <div class="qrpay"><img src="/payment-qr-v5.png" alt="Scan this QR code to pay 1200 INR with any UPI app"><div><strong>Amount: ₹1,200 INR / $16</strong></div><div>Scan to pay with any UPI app</div></div>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
@@ -192,7 +193,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
   <!-- App -->
   <div id="app" hidden>
     <div class="toolbar">
-      <button class="landing-link" id="backLanding" type="button">Back to prayer times landing page</button>
+      <nav class="tabs" aria-label="App sections"><button class="tab active" type="button" aria-current="page">Doas</button><button class="tab" id="prayerTab" type="button">Athan</button></nav>
       <label class="search"><input id="q" type="search" placeholder="Search by meaning, sound or surah" aria-label="Search Doas" autocomplete="off"></label>
       <div class="chips" id="chips" role="group" aria-label="Filter by theme"></div>
     </div>
@@ -316,7 +317,10 @@ function prayerDate(){var d=new Date();return ('0'+d.getDate()).slice(-2)+'-'+('
 function loadPrayerTimes(){
   if(prayerLoaded)return; prayerLoaded=true;
   var meta=$('prayerMeta'),grid=$('prayerGrid'),locBtn=$('locatePrayer'),cityBtn=$('cityPrayer');
-  function fail(){meta.textContent='Allow location access or search for your city';grid.innerHTML='<div class="pnote">Use the city search below if location access is unavailable.</div>';locBtn.disabled=false;cityBtn.disabled=false;}
+  function fail(){
+    meta.textContent='Location permission unavailable. Finding an approximate location';
+    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){if(!d||!d.latitude||!d.longitude)throw Error('No approximate location');run({coords:{latitude:d.latitude,longitude:d.longitude}});}).catch(function(){meta.textContent='Allow location access or search for your city';grid.innerHTML='<div class="pnote">Use the city search below if location access is unavailable.</div>';locBtn.disabled=false;cityBtn.disabled=false;});
+  }
   function render(t,tz,readable){
     meta.textContent='Local times for '+(tz||'your time zone')+' '+(readable||'today');
     grid.innerHTML=[['Fajr',t.Fajr],['Dhuhr',t.Dhuhr],['Asr',t.Asr],['Maghrib',t.Maghrib],['Isha',t.Isha]].map(function(x){return '<div class="ptimebox"><b>'+x[0]+'</b><span>'+fmtPrayerTime(x[1])+'</span></div>';}).join('');
@@ -327,7 +331,7 @@ function loadPrayerTimes(){
     try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch(e){}
     meta.textContent='Calculating local times';locBtn.disabled=true;cityBtn.disabled=true;
     var url='https://api.aladhan.com/v1/timings/'+prayerDate()+'?latitude='+lat+'&longitude='+lon+'&method=3&school=0&timezonestring='+encodeURIComponent(tz);
-    fetch(url).then(function(r){return r.json();}).then(function(d){var t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');render(t,tz,d.data.date&&d.data.date.readable||'today');}).catch(fail);
+    fetch(url).then(function(r){return r.json();}).then(function(d){var t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');render(t,tz,d.data.date&&d.data.date.readable||'today');}).catch(function(){meta.textContent='Prayer times unavailable';locBtn.disabled=false;cityBtn.disabled=false;});
   }
   function useLocation(){prayerLoaded=false;loadPrayerTimes();if(!navigator.geolocation){fail();return;}locBtn.disabled=true;navigator.geolocation.getCurrentPosition(run,fail,{enableHighAccuracy:false,timeout:15000,maximumAge:900000});}
   function searchCity(){
@@ -561,7 +565,7 @@ document.addEventListener('click',function(e){
   }
 });
 $('cardPay').addEventListener('click',payWithCard);
-$('backLanding').addEventListener('click',function(){store.del(TOKEN_KEY);store.del(CACHE_KEY);location.href='/?landing=1';});
+$('prayerTab').addEventListener('click',function(){location.href='/?landing=1';});
 $('claimBtn').addEventListener('click',claimAccess);
 $('claimRef').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4);});
 $('q').addEventListener('input',function(e){state.q=e.target.value;renderList();});
