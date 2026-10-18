@@ -142,7 +142,6 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 
 <header class="hero">
   <div class="wrap">
-    <img class="page-mark" src="/mosque-icon.png" alt="Mosque icon">
     <img class="banner" src="/mosque.jpg" width="991" height="554" alt="Mosque domes and a minaret among clouds, with a gold arch border">
     <div class="head">
       <h1>My Doas App</h1>
@@ -548,8 +547,6 @@ $('prayerTab').addEventListener('click',function(){location.href='/?athan=1';});
 var deferredInstall=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstall=e;$('installBtn').hidden=false;});
 $('installBtn').addEventListener('click',function(){if(!deferredInstall)return;deferredInstall.prompt();deferredInstall.userChoice.then(function(){deferredInstall=null;$('installBtn').hidden=true;});});
-$('claimBtn').addEventListener('click',claimAccess);
-$('claimRef').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,4);});
 $('q').addEventListener('input',function(e){state.q=e.target.value;renderList();});
 
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
