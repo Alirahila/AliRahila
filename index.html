@@ -164,25 +164,17 @@ body.in-app .bism{font-size:24px;margin-top:4px}
       <li>Surah Ad-Duha and the Doas from the last part of the Qur'an</li>
       <li>Save your favourite Doas and count your repetitions</li>
     </ul>
-    <button class="btn" id="cardPay" type="button">Open payment page</button>
+    <button class="btn" id="cardPay" type="button">Subscribe to My Doas</button>
     <button class="btn outline" id="installBtn" type="button" hidden>Install My Doas App</button>
-    <div class="qrpay"><img src="/payment-qr-v5.png" alt="Scan this QR code to pay 1200 INR with any UPI app"><div><strong>Amount: ₹1,200 INR / $16</strong></div><div>Scan to pay with any UPI app</div></div>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
-    <p class="msg" role="status" aria-live="polite">Access opens only after a verified payment is received.</p>
-    <p class="msg">The current QR-only payment cannot verify transactions automatically. Please do not enter a reference number as a substitute for verification.</p>
     </div>
     <section class="prayer" id="prayerLanding" aria-labelledby="prayerTitle" hidden>
       <h2 id="prayerTitle">Today’s prayer times</h2>
-      <p class="pmeta" id="prayerMeta">Allow location access to calculate local times.</p>
-      <div class="prayer-grid" id="prayerGrid"><div class="pnote">Your location is used only to request today’s prayer times. <a href="/privacy.html">Privacy</a></div></div>
+      <p class="pmeta" id="prayerMeta">Allow location access to show prayer times for your location.</p>
+      <div class="prayer-grid" id="prayerGrid"><div class="pnote">Your prayer location will be updated from your device GPS.</div></div>
       <button id="locatePrayer" type="button">Use my location</button>
-      <div class="location-tools" aria-label="Search prayer times by city">
-        <input id="cityName" type="text" value="Bengaluru" placeholder="City" autocomplete="address-level2" aria-label="City">
-        <input id="countryName" type="text" value="India" placeholder="Country" autocomplete="country-name" aria-label="Country">
-        <button id="cityPrayer" type="button">Search city</button>
-      </div>
-      <p class="pnote">Times use your local time zone and update automatically for daylight saving changes.</p>
+      <p class="pnote">Times update for your current location, time zone, and daylight-saving rules.</p>
     </section>
   </section>
 
@@ -292,32 +284,23 @@ function fmtPrayerTime(v){
 function prayerDate(){var d=new Date();return ('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();}
 function loadPrayerTimes(){
   if(prayerLoaded)return; prayerLoaded=true;
-  var meta=$('prayerMeta'),grid=$('prayerGrid'),locBtn=$('locatePrayer'),cityBtn=$('cityPrayer');
-  function fail(){
-    meta.textContent='Finding your approximate location';
-    fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){if(!d||!d.latitude||!d.longitude)throw Error('No approximate location');run({coords:{latitude:d.latitude,longitude:d.longitude}});}).catch(function(){meta.textContent='Using Bengaluru India';searchCity();});
-  }
+  var meta=$('prayerMeta'),grid=$('prayerGrid'),locBtn=$('locatePrayer');
+  function fail(){meta.textContent='Please allow location access to load local prayer times';grid.innerHTML='<div class="pnote">Turn on location permission for this site, then tap Use my location.</div>';locBtn.disabled=false;}
   function render(t,tz,readable){
-    meta.textContent='Local times for '+(tz||'your time zone')+' '+(readable||'today');
+    meta.textContent='Prayer times for '+(readable||'your current location')+' · '+(tz||'local time');
     grid.innerHTML=[['Fajr',t.Fajr],['Dhuhr',t.Dhuhr],['Asr',t.Asr],['Maghrib',t.Maghrib],['Isha',t.Isha]].map(function(x){return '<div class="ptimebox"><b>'+x[0]+'</b><span>'+fmtPrayerTime(x[1])+'</span></div>';}).join('');
-    locBtn.textContent='Refresh my location';locBtn.disabled=false;cityBtn.disabled=false;
+    locBtn.textContent='Update my location';locBtn.disabled=false;
   }
   function run(pos){
     var lat=pos.coords.latitude.toFixed(5),lon=pos.coords.longitude.toFixed(5),tz='UTC';
     try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch(e){}
-    meta.textContent='Calculating local times';locBtn.disabled=true;cityBtn.disabled=true;
+    meta.textContent='Updating your prayer location';locBtn.disabled=true;
     var url='https://api.aladhan.com/v1/timings/'+prayerDate()+'?latitude='+lat+'&longitude='+lon+'&method=3&school=0&timezonestring='+encodeURIComponent(tz);
-    fetch(url).then(function(r){return r.json();}).then(function(d){var t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');render(t,tz,d.data.date&&d.data.date.readable||'today');}).catch(function(){meta.textContent='Prayer times unavailable';locBtn.disabled=false;cityBtn.disabled=false;});
+    var place=fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+lat+'&lon='+lon+'&zoom=10&addressdetails=1',{headers:{Accept:'application/json'}}).then(function(r){return r.json();}).then(function(d){var a=d&&d.address||{};return a.city||a.town||a.village||a.state||'Your current location';}).catch(function(){return 'Your current location';});
+    Promise.all([fetch(url).then(function(r){return r.json();}),place]).then(function(a){var d=a[0],t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');render(t,tz,a[1]);}).catch(function(){meta.textContent='Prayer times unavailable for this location';locBtn.disabled=false;});
   }
-  function useLocation(){prayerLoaded=false;loadPrayerTimes();if(!navigator.geolocation){fail();return;}locBtn.disabled=true;navigator.geolocation.getCurrentPosition(run,fail,{enableHighAccuracy:false,timeout:15000,maximumAge:900000});}
-  function searchCity(){
-    var city=($('cityName').value||'Bengaluru').trim(),country=($('countryName').value||'India').trim();
-    if(!city||!country){meta.textContent='Enter both city and country';return;}
-    meta.textContent='Finding prayer times';locBtn.disabled=true;cityBtn.disabled=true;
-    var url='https://api.aladhan.com/v1/timingsByCity/'+prayerDate()+'?city='+encodeURIComponent(city)+'&country='+encodeURIComponent(country)+'&method=3&school=0';
-    fetch(url).then(function(r){return r.json();}).then(function(d){var t=d&&d.data&&d.data.timings;if(!t)throw Error('No timings');render(t,Intl.DateTimeFormat().resolvedOptions().timeZone||'local time',city+' '+country);}).catch(function(){meta.textContent='Enter another city and country';locBtn.disabled=false;cityBtn.disabled=false;});
-  }
-  locBtn.onclick=useLocation;cityBtn.onclick=searchCity;
+  function useLocation(){if(!navigator.geolocation){fail();return;}locBtn.disabled=true;meta.textContent='Getting your current location';navigator.geolocation.getCurrentPosition(run,fail,{enableHighAccuracy:true,timeout:20000,maximumAge:300000});}
+  locBtn.onclick=useLocation;
   if(navigator.permissions&&navigator.permissions.query){navigator.permissions.query({name:'geolocation'}).then(function(x){if(x.state==='granted')useLocation();}).catch(function(){});}
 }
 
@@ -345,15 +328,15 @@ function boot(){
   }
   if(qs.get('access')==='paid'){
     history.replaceState({},'',location.pathname);
-    showPaywall('Automatic payment confirmation is required before access can be granted.',true);
+    showPaywall('',false);
     return;
   }
   var token=store.get(TOKEN_KEY,null);
   if(!token){showPaywall();return;}
   openWithToken(token).catch(function(e){
     store.del(TOKEN_KEY);store.del(CACHE_KEY);
-    if(e&&e.status===401){showPaywall('Your payment access is no longer valid. Please pay and enter a new unlock code.');return;}
-    showPaywall('Could not verify access with the server. Connect to the internet and try again.');
+    if(e&&e.status===401){showPaywall('');return;}
+    showPaywall('');
   });
 }
 
