@@ -273,7 +273,7 @@ function showPaywall(note){
   if(athanMode){loadPrayerTimes();setTimeout(function(){$('locatePrayer').click();},250);}
   api('/api/config').then(function(cfg){state.cfg=cfg;$('cardPay').textContent='Open payment page';$('cardPay').disabled=!cfg.checkoutReady;if(!cfg.checkoutReady&&!athanMode)setWallMsg('Verified payment is not configured yet.',false);}).catch(function(){$('cardPay').disabled=true;if(!athanMode)setWallMsg('Could not reach the server.',true);});
 }
-function payWithCard(){window.location.href='/payment.html';}
+function payWithCard(){window.location.href='/subscribe.html';}
 
 /* ---------- local prayer times ---------- */
 var prayerLoaded=false;
