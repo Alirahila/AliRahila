@@ -66,9 +66,6 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 .incl li:first-child{border-top:0}
 .incl li::before{content:"";position:absolute;left:4px;top:17px;width:9px;height:9px;border-radius:50%;background:var(--pink)}
 .btn.small{margin-top:10px;min-height:46px;font-size:17px}
-.claim{margin-top:28px;padding-top:22px;border-top:1px solid var(--line);max-width:340px;margin-left:auto;margin-right:auto}
-.claim-lead{text-align:center;color:var(--cream-dim);font-size:15px;margin:0 0 12px;font-style:italic}
-.claim input{width:100%;box-sizing:border-box;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--wall-2);color:var(--cream);padding:0 14px;font:inherit;font-size:17px;text-align:center}
 .btn.outline{background:transparent;border:1.5px solid var(--pink);color:var(--pink);margin-top:12px}
 .btn.outline:hover{background:rgba(242,163,192,.08)}
 .ck-title{margin:0 0 10px;font-size:24px;font-weight:600;color:var(--cream)}
@@ -260,7 +257,7 @@ function show(which){
   $('app').hidden=which!=='app';
 }
 
-/* ---------- paywall + payment link ---------- */
+/* ---------- subscription paywall ---------- */
 function setWallMsg(text,isErr){var m=$('wallmsg');m.textContent=text||'';m.classList.toggle('err',!!isErr);}
 function showPaywall(note){
   show('paywall');
@@ -271,7 +268,7 @@ function showPaywall(note){
   $('athanLandingTab').classList.toggle('active',athanMode);$('athanLandingTab').toggleAttribute('aria-current',athanMode);
   setWallMsg(note||'',false);
   if(athanMode){loadPrayerTimes();setTimeout(function(){$('locatePrayer').click();},250);}
-  api('/api/config').then(function(cfg){state.cfg=cfg;$('cardPay').textContent='Open payment page';$('cardPay').disabled=!cfg.checkoutReady;if(!cfg.checkoutReady&&!athanMode)setWallMsg('Verified payment is not configured yet.',false);}).catch(function(){$('cardPay').disabled=true;if(!athanMode)setWallMsg('Could not reach the server.',true);});
+  api('/api/config').then(function(cfg){state.cfg=cfg;}).catch(function(){});
 }
 function payWithCard(){window.location.href='/subscribe.html';}
 
