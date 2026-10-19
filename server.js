@@ -61,8 +61,10 @@ const MIME = {
   '.json': 'application/json; charset=utf-8', '.webmanifest': 'application/manifest+json',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon'
 };
+const PRIVATE_FILES = new Set(['/server.js', '/package.json', '/doas.json', '/claims.json', '/unlock-codes.json', '/.env']);
 function serveStatic(req, res, url) {
   let relative = decodeURIComponent(url.pathname);
+  if (PRIVATE_FILES.has(relative)) { res.writeHead(404, { 'Cache-Control': 'no-store' }); return res.end('Not found'); }
   if (relative === '/') relative = '/index.html';
   const file = path.normalize(path.join(PUBLIC_DIR, relative));
   if (!file.startsWith(PUBLIC_DIR + path.sep)) { res.writeHead(403); return res.end('Forbidden'); }
