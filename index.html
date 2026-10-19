@@ -284,7 +284,8 @@ function loadPrayerTimes(){
   var meta=$('prayerMeta'),grid=$('prayerGrid'),locBtn=$('locatePrayer');
   function fail(){meta.textContent='Please allow location access to load local prayer times';grid.innerHTML='<div class="pnote">Turn on location permission for this site, then tap Use my location.</div>';locBtn.disabled=false;}
   function render(t,tz,readable){
-    meta.textContent='Prayer times for '+(readable||'your current location')+' · '+(tz||'local time');
+    var displayTz=tz==='Asia/Calcutta'?'Asia/Kolkata':(tz||'local time');
+    meta.textContent='Prayer times for '+(readable||'your current location')+' · '+displayTz;
     grid.innerHTML=[['Fajr',t.Fajr],['Dhuhr',t.Dhuhr],['Asr',t.Asr],['Maghrib',t.Maghrib],['Isha',t.Isha]].map(function(x){return '<div class="ptimebox"><b>'+x[0]+'</b><span>'+fmtPrayerTime(x[1])+'</span></div>';}).join('');
     locBtn.textContent='Update my location';locBtn.disabled=false;
   }
