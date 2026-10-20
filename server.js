@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 3000;
 const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 const PLAN_DAYS = Number(process.env.PLAN_DAYS || 365);
-const PRICE_LABEL = '$20 USD / annual subscription';
+const PRICE_LABEL = '$20 USD / annual subscription · ₹1,920 INR';
 const PUBLIC_DIR = __dirname;
 const DOAS_FILE = path.join(PUBLIC_DIR, 'doas.json');
 
@@ -36,12 +36,44 @@ function readToken(token) {
     return payload && typeof payload.exp === 'number' && payload.exp >= Date.now() ? payload : null;
   } catch (_) { return null; }
 }
+function makeToken(last4) {
+  const payload = Buffer.from(JSON.stringify({
+    exp: Date.now() + PLAN_DAYS * 86400000,
+    method: 'manual-last-four',
+    ref: last4
+  }), 'utf8').toString('base64url');
+  const sig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('base64url');
+  return payload + '.' + sig;
+}
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 4096) req.destroy();
+    });
+    req.on('end', () => {
+      try { resolve(body ? JSON.parse(body) : {}); }
+      catch (_) { reject(new Error('Invalid JSON')); }
+    });
+    req.on('error', reject);
+  });
+}
 async function handleApi(req, res, url) {
   if (req.method === 'GET' && url.pathname === '/api/config') {
     return send(res, 200, { checkoutReady: false, checkoutUrl: '', priceLabel: PRICE_LABEL });
   }
   if (req.method === 'POST' && url.pathname === '/api/access') {
-    return send(res, 410, { error: 'Verified payment is required before access can be granted.' });
+    try {
+      const body = await readJson(req);
+      const last4 = String(body.last4 || '').replace(/\s/g, '');
+      if (!/^\d{4}$/.test(last4)) {
+        return send(res, 400, { error: 'Enter exactly the last 4 digits of your transaction ID.' });
+      }
+      return send(res, 200, { token: makeToken(last4), exp: Date.now() + PLAN_DAYS * 86400000 });
+    } catch (_) {
+      return send(res, 400, { error: 'Please enter the last 4 digits of your transaction ID.' });
+    }
   }
   if (req.method === 'GET' && url.pathname === '/api/doas') {
     const payload = readToken(bearer(req));
