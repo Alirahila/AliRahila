@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>My Doas App: Quranic Doas</title>
+<title>MyDoas: Quranic Doas</title>
 <meta name="description" content="Quranic Doas with Arabic, transliteration, meaning and recitation.">
 <meta name="theme-color" content="#26262a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="My Doas">
+<meta name="apple-mobile-web-app-title" content="MyDoas">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -143,7 +144,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
   <div class="wrap">
     <img class="banner" src="/mosque.jpg" width="991" height="554" alt="Mosque domes and a minaret among clouds, with a gold arch border">
     <div class="head">
-      <h1>My Doas App</h1>
+      <h1>MyDoas</h1>
       <p class="sub">Quranic Doas</p>
       <p class="bism" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
     </div>
@@ -155,7 +156,7 @@ body.in-app .bism{font-size:24px;margin-top:4px}
 
   <!-- Front page -->
   <section class="plan" id="paywall" hidden>
-    <nav class="tabs" id="landingTabs" aria-label="Landing sections"><button class="tab active" id="doasLandingTab" type="button" aria-current="page">My Doas</button><button class="tab" id="athanLandingTab" type="button">Athan</button></nav>
+    <nav class="tabs" id="landingTabs" aria-label="Landing sections"><button class="tab active" id="doasLandingTab" type="button" aria-current="page">MyDoas</button><button class="tab" id="athanLandingTab" type="button">Athan</button></nav>
     <div id="doasLandingContent">
     <ul class="incl">
       <li>Every Quranic Doa in clear Arabic, with transliteration and meaning</li>
@@ -163,17 +164,17 @@ body.in-app .bism{font-size:24px;margin-top:4px}
       <li>Surah Ad-Duha and the Doas from the last part of the Qur'an</li>
       <li>Save your favourite Doas and count your repetitions</li>
     </ul>
-    <button class="btn" id="cardPay" type="button">Subscribe to My Doas</button>
+    <button class="btn" id="cardPay" type="button">Subscribe to MyDoas</button>
     <div class="manual-access" aria-labelledby="manualAccessTitle">
       <h2 id="manualAccessTitle">Already paid?</h2>
       <p>After paying, enter the last 4 digits of your transaction ID to open the app.</p>
       <label class="manual-label" for="last4">Last 4 digits of transaction ID</label>
       <input id="last4" class="manual-input" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" placeholder="0000" aria-describedby="manualMsg">
-      <button class="btn outline" id="unlockBtn" type="button">Open My Doas App</button>
+      <button class="btn outline" id="unlockBtn" type="button">Open MyDoas</button>
       <p class="msg" id="manualMsg" role="status" aria-live="polite"></p>
     </div>
-    <button class="btn outline" id="installBtn" type="button" hidden>Install My Doas App</button>
-    <section class="install-guide" aria-labelledby="accessTitle"><h2 id="accessTitle">How to access the app</h2><p>Tap <strong>Subscribe to My Doas</strong>, complete the payment, then return to this app link: <strong>my-doas.onrender.com</strong>.</p><p>Access to the Doas opens after the payment has been verified. If the page still shows the subscription screen, return later after verification is complete.</p><h2 id="installTitle">How to download the app</h2><p><strong>Android:</strong> open this page in Chrome, tap the browser menu, then choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p><p><strong>iPhone:</strong> open this page in Safari, tap <strong>Share</strong>, choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</p><p>After installation, open the new <strong>My Doas App</strong> icon from your home screen.</p></section>
+    <button class="btn outline" id="installBtn" type="button" hidden>Install MyDoas</button>
+    <section class="install-guide" aria-labelledby="accessTitle"><h2 id="accessTitle">How to access the app</h2><p>Tap <strong>Subscribe to MyDoas</strong>, complete the payment, then return to this app link: <strong>my-doas.onrender.com</strong>.</p><p>Access to the Doas opens after the payment has been verified. If the page still shows the subscription screen, return later after verification is complete.</p><h2 id="installTitle">How to download the app</h2><p><strong>Android:</strong> open this page in Chrome, tap the browser menu, then choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p><p><strong>iPhone:</strong> open this page in Safari, tap <strong>Share</strong>, choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</p><p>After installation, open the new <strong>MyDoas</strong> icon from your home screen.</p></section>
     <p class="msg" id="wallmsg" role="status" aria-live="polite"></p>
 
     </div>

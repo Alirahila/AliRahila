@@ -1,7 +1,7 @@
 {
-  "name": "My Doas App",
-  "short_name": "My Doas",
-  "start_url": "/?landing=1",
+  "name": "MyDoas",
+  "short_name": "MyDoas",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#26262a",
   "theme_color": "#f08ab7",
